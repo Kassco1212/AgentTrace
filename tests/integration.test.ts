@@ -6,7 +6,7 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initializeDatabase } from "../src/db/schema";
@@ -17,6 +17,26 @@ import { redactSecrets } from "../src/security/redact";
 
 let repoDir: string;
 let scriptPath: string;
+
+// Windows can't execute a #!/usr/bin/env bash script directly (no shebang
+// support in uv_spawn), so run it through Git Bash explicitly there. Bun's
+// spawn doesn't resolve "bash" via PATH the way a shell would, so fall back
+// to Git for Windows' well-known install locations.
+function findWindowsBash(): string {
+  const candidates = [
+    `${process.env.ProgramFiles}\\Git\\bin\\bash.exe`,
+    `${process.env["ProgramFiles(x86)"]}\\Git\\bin\\bash.exe`,
+  ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) throw new Error("Git Bash not found; checked: " + candidates.join(", "));
+  return found;
+}
+
+function runScript(): Promise<import("../src/utils/process").AgentRunResult> {
+  return process.platform === "win32"
+    ? runAgentProcess(findWindowsBash(), [scriptPath], repoDir)
+    : runAgentProcess(scriptPath, [], repoDir);
+}
 
 function git(args: string[]): string {
   return execFileSync("git", args, { cwd: repoDir, encoding: "utf8" }).trim();
@@ -70,7 +90,7 @@ test("full session lifecycle: run -> snapshot -> persist -> read back", async ()
   expect(sessionId).toBeGreaterThan(0);
   expect(getSession(db, sessionId)?.status).toBe("running");
 
-  const result = await runAgentProcess(scriptPath, [], repoDir);
+  const result = await runScript();
   expect(result.exitCode).toBe(0);
   expect(result.interrupted).toBe(false);
   expect(result.stdout).toContain("fake-agent: starting");
@@ -142,7 +162,7 @@ test("failed agent run is still recorded, not lost", async () => {
     startedAt: new Date().toISOString(),
   });
 
-  const result = await runAgentProcess(scriptPath, [], repoDir);
+  const result = await runScript();
   expect(result.exitCode).toBe(1);
 
   const after = await captureSnapshot(repoDir);

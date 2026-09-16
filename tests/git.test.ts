@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   captureSnapshot,
   findRepositoryRoot,
@@ -42,7 +42,7 @@ describe("findRepositoryRoot", () => {
     // Resolve symlinks (macOS /tmp is a symlink) by comparing basenames of
     // the trailing path segment rather than exact string equality.
     expect(root).not.toBeNull();
-    expect(root?.endsWith(repoDir.split("/").pop() ?? "")).toBe(true);
+    expect(basename(root ?? "")).toBe(basename(repoDir));
   });
 
   test("returns null outside any Git repository", async () => {

@@ -2,6 +2,7 @@
 // a real Claude Code or Codex process (those may not be installed or
 // authenticated in CI).
 
+// @ts-ignore
 import { describe, expect, test } from "bun:test";
 import { claudeAdapter } from "../src/agents/claude";
 import { codexAdapter } from "../src/agents/codex";
