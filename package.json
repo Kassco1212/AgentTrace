@@ -1,0 +1,22 @@
+{
+  "name": "agenttrace",
+  "version": "0.1.0",
+  "description": "Local Git-aware traces for coding-agent sessions",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "agenttrace": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.6.0"
+  }
+}
